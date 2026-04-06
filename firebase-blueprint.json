@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Represents a user of the PrestigeCourier platform (Law Firm, Courier, or Admin).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique identifier for the user." },
+        "email": { "type": "string", "format": "email", "description": "User's email address." },
+        "role": { "type": "string", "enum": ["firm", "courier", "admin"], "description": "User's role in the system." },
+        "name": { "type": "string", "description": "User's full name." },
+        "firmName": { "type": "string", "description": "Name of the law firm (if role is firm)." },
+        "verificationStatus": { "type": "string", "enum": ["pending", "verified", "rejected"], "description": "Verification status of the user." },
+        "rating": { "type": "number", "description": "Average rating of the courier (if role is courier)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the user was created." }
+      },
+      "required": ["uid", "email", "role", "name"]
+    },
+    "Delivery": {
+      "title": "Delivery",
+      "description": "Represents a document transport request.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the delivery." },
+        "firmId": { "type": "string", "description": "UID of the law firm that requested the delivery." },
+        "courierId": { "type": "string", "description": "UID of the assigned courier." },
+        "pickupAddress": { "type": "string", "description": "Full pickup address." },
+        "dropoffAddress": { "type": "string", "description": "Full drop-off address." },
+        "documentType": { "type": "string", "description": "Type of document (e.g., Confidential, Court Filing)." },
+        "urgency": { "type": "string", "enum": ["standard", "same-day", "urgent"], "description": "Urgency level of the delivery." },
+        "instructions": { "type": "string", "description": "Special handling instructions." },
+        "status": { "type": "string", "enum": ["pending", "assigned", "picked_up", "in_transit", "delivered", "cancelled"], "description": "Current status of the delivery." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the request was created." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp when the status was last updated." },
+        "chainOfCustody": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "timestamp": { "type": "string", "format": "date-time" },
+              "status": { "type": "string" },
+              "location": { "type": "object", "properties": { "lat": { "type": "number" }, "lng": { "type": "number" } } },
+              "actorId": { "type": "string" },
+              "actorName": { "type": "string" },
+              "notes": { "type": "string" }
+            }
+          }
+        },
+        "verificationCode": { "type": "string", "description": "PIN code for delivery confirmation." }
+      },
+      "required": ["firmId", "pickupAddress", "dropoffAddress", "documentType", "urgency", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles."
+    },
+    "/deliveries/{deliveryId}": {
+      "schema": "Delivery",
+      "description": "Transport requests and their history."
+    }
+  }
+}

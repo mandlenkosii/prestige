@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (UID)
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - role: string (required, enum: ['firm', 'courier', 'admin'])
+    //   - name: string (required)
+    //   - firmName: string (optional)
+    //   - verificationStatus: string (optional, enum: ['pending', 'verified', 'rejected'])
+    //   - rating: number (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: deliveries
+    // Document ID: deliveryId
+    // Fields:
+    //   - id: string (required)
+    //   - firmId: string (required)
+    //   - courierId: string (optional)
+    //   - pickupAddress: string (required)
+    //   - dropoffAddress: string (required)
+    //   - documentType: string (required)
+    //   - urgency: string (required, enum: ['standard', 'same-day', 'urgent'])
+    //   - instructions: string (optional)
+    //   - status: string (required, enum: ['pending', 'assigned', 'picked_up', 'in_transit', 'delivered', 'cancelled'])
+    //   - createdAt: timestamp (required)
+    //   - updatedAt: timestamp (required)
+    //   - chainOfCustody: list (required)
+    //   - verificationCode: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        getUserRole() == 'admin' ||
+        (request.auth.token.email == "jjuniorsikhosana@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isFirm() {
+      return isAuthenticated() && getUserRole() == 'firm';
+    }
+
+    function isCourier() {
+      return isAuthenticated() && getUserRole() == 'courier';
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'name', 'createdAt']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.role in ['firm', 'courier', 'admin'] &&
+             data.name is string &&
+             data.name.size() > 0 && data.name.size() < 100;
+    }
+
+    function isValidDelivery(data) {
+      return data.keys().hasAll(['firmId', 'pickupAddress', 'dropoffAddress', 'documentType', 'urgency', 'status', 'createdAt', 'updatedAt', 'chainOfCustody']) &&
+             data.firmId is string &&
+             data.pickupAddress is string && data.pickupAddress.size() > 0 && data.pickupAddress.size() < 500 &&
+             data.dropoffAddress is string && data.dropoffAddress.size() > 0 && data.dropoffAddress.size() < 500 &&
+             data.documentType is string &&
+             data.urgency in ['standard', 'same-day', 'urgent'] &&
+             data.status in ['pending', 'assigned', 'picked_up', 'in_transit', 'delivered', 'cancelled'] &&
+             data.chainOfCustody is list;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role != 'admin';
+      allow update: if isAuthenticated() && (
+        (isOwner(userId) && request.resource.data.role == resource.data.role && isValidUser(request.resource.data)) ||
+        isAdmin()
+      );
+    }
+
+    match /deliveries/{deliveryId} {
+      // Allow public access for demo mode
+      allow read, create, update: if true;
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "PrestigeCourier",
+  "description": "Secure document transport and messenger platform for law firms with full chain-of-custody tracking.",
+  "requestFramePermissions": ["geolocation"]
+}
